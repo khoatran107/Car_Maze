@@ -13,14 +13,17 @@ const int motor2en = 9;
 volatile unsigned int leftPulses;
 volatile unsigned int rightPulses;
 
-volatile unsigned int turnHoleCount;
+volatile unsigned int turnLeftHoleCount;
+volatile unsigned int turnRightHoleCount;
 
 const int holeRequired = 28;
 
 const int targetSpeed = 200;
 const int tolerance = 5;
 int oldTime;
-bool turnYet = false;
+
+bool turnLeftYet = false;
+bool turnRightYet = false;
 
 enum Mode {
   GO_STRAIGHT,
@@ -33,12 +36,14 @@ Mode currentMode = GO_STRAIGHT;
 
 void leftCounter() {
   leftPulses++;
-  turnHoleCount++;
-  if (turnHoleCount == holeRequired) currentMode = GO_STRAIGHT;
+  turnLeftHoleCount++;
+  if (turnLeftHoleCount == holeRequired) currentMode = GO_STRAIGHT;
 }
 
 void rightCounter() {
   rightPulses++;
+  turnRightHoleCount++;
+  if (turnRightHoleCount == holeRequired) currentMode = GO_STRAIGHT;
 }
 
 void setup() {
@@ -55,22 +60,25 @@ void setup() {
   pinMode(PIN_DO_RIGHT, INPUT);
   leftPulses = 0;
   rightPulses = 0;
-  turnHoleCount = holeRequired + 1;
+  turnLeftHoleCount = holeRequired + 1;
+  turnRightHoleCount = holeRequired + 1;
   attachInterrupt(digitalPinToInterrupt(PIN_DO_LEFT), leftCounter, FALLING);
   attachInterrupt(digitalPinToInterrupt(PIN_DO_RIGHT), rightCounter, FALLING);
   oldTime = 0;
 }
 
 void loop() {
-  if (millis() - oldTime >= 2000 && !turnYet) {
+  if (((int)((millis() - oldTime)/3000) % 2 == 1) && !turnLeftYet) {
     setTurnLeft();
-    turnYet = true;
+    turnLeftYet = true;
+    turnRightYet = false;
     Serial.println("Hello world");
   }
 
-  if (millis() - oldTime >= 6000 && !turnYet) {
-    setTurnLeft();
-    turnYet = true;
+  if (((int)((millis() - oldTime)/3000) % 2 == 0) && !turnRightYet) {
+    setTurnRight();
+    turnLeftYet = false;
+    turnRightYet = true;
     Serial.println("Hello world");
   }
 
@@ -101,6 +109,7 @@ void loop() {
   } else if (currentMode == TURN_RIGHT) {
     digitalWrite(motor1pin1, HIGH);
     digitalWrite(motor1pin2, LOW);
+
     digitalWrite(motor2pin1, LOW);
     digitalWrite(motor2pin2, HIGH);
   }
@@ -108,11 +117,11 @@ void loop() {
 }
 
 void setTurnLeft() {
-  turnHoleCount = 0;
+  turnLeftHoleCount = 0;
   currentMode = TURN_LEFT;
 }
 
 void setTurnRight() {
-  turnHoleCount = 0;
+  turnRightHoleCount = 0;
   currentMode = TURN_RIGHT;
 }
